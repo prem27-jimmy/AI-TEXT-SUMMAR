@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Text Summarizer</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+ font-family:Arial,sans-serif;
+ min-height:100vh;
+ background:linear-gradient(135deg,#0f172a,#1e293b);
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ overflow:hidden;
+}
+.intro{
+ position:fixed;inset:0;background:black;
+ display:flex;align-items:center;justify-content:center;
+ z-index:9999;
+}
+.intro img{
+ width:120px;
+ animation:blink 1.4s ease 1,
+ zoomIn 1s ease 1.4s,
+ zoomOut .8s ease 2.5s,
+ moveUp 1.2s ease 3.3s forwards;
+}
+@keyframes blink{45%{filter:brightness(.3)}}
+@keyframes zoomIn{to{transform:scale(1.9)}}
+@keyframes zoomOut{to{transform:scale(1)}}
+@keyframes moveUp{to{transform:translateY(-260px) scale(.6)}}
+
+.container{
+ width:90%;max-width:850px;background:#fff;
+ padding:35px;border-radius:16px;
+ box-shadow:0 25px 60px rgba(0,0,0,.3);
+ opacity:0;transform:translateY(40px);
+ transition:1s ease;
+}
+.container.show{opacity:1;transform:translateY(0)}
+
+.top-logo{text-align:center;margin-bottom:10px}
+.top-logo img{width:55px}
+
+.typing{
+ font-size:34px;font-weight:bold;
+ text-align:center;margin-bottom:10px;
+ color:#22d3ee;border-right:3px solid #22d3ee;
+ white-space:nowrap;overflow:hidden;
+ animation:typing 3s steps(22),caret .7s infinite;
+}
+@keyframes typing{from{width:0}to{width:100%}}
+@keyframes caret{50%{border-color:transparent}}
+
+.subtitle{text-align:center;color:#67e8f9;margin-bottom:25px}
+
+textarea{
+ width:100%;height:180px;padding:14px 55px 14px 14px;
+ font-size:16px;border-radius:10px;border:1px solid #ccc;
+}
+textarea:focus{outline:none;box-shadow:0 0 12px rgba(34,211,238,.6)}
+
+.input-wrapper{position:relative}
+.icons{
+ position:absolute;right:10px;top:10px;
+ display:flex;flex-direction:column;gap:8px;
+}
+.icons button,.icons label{
+ background:#e0f2fe;border:none;
+ padding:6px;border-radius:6px;
+ cursor:pointer;font-size:18px;
+}
+
+.counter{text-align:right;font-size:13px;margin-top:6px;color:#64748b}
+.controls{display:flex;gap:10px;margin-top:15px}
+select,button{padding:12px;font-size:15px;border-radius:8px}
+button{background:#a5f3fc;border:none;cursor:pointer}
+button:disabled{background:#cbd5e1}
+.loader{text-align:center;margin-top:15px;display:none;color:#2563eb}
+
+.output{margin-top:25px;opacity:0;transform:translateY(40px);transition:.8s}
+.output.show{opacity:1;transform:translateY(0)}
+
+.summary-box{
+ max-height:200px;overflow-y:auto;
+ background:#f1f5f9;padding:16px;border-radius:10px;
+}
+.actions{display:flex;gap:10px;margin-top:10px}
+.actions button{flex:1;background:#0ea5e9;color:white}
+.actions .clear{background:#ef4444}
+
+#nameScreen,#helloScreen{
+ position:fixed;inset:0;background:black;
+ display:flex;flex-direction:column;
+ align-items:center;justify-content:center;
+ z-index:99999;color:#22d3ee;
+}
+#helloScreen{display:none}
+</style>
+</head>
+
+<body>
+
+<div id="nameScreen">
+ <h2>Enter your name</h2>
+ <input id="userName" placeholder="Your name">
+ <button onclick="showHello()">Continue</button>
+</div>
+
+<div id="helloScreen">
+ <h1 id="helloText"></h1>
+</div>
+
+<div class="intro" id="intro">
+ <img src="robot.png">
+</div>
+
+<div class="container" id="app">
+ <div class="top-logo"><img src="robot.png"></div>
+ <div class="typing">AI Text Summarizer</div>
+ <div class="subtitle">Paste, speak, or scan text</div>
+
+ <div class="input-wrapper">
+  <textarea id="inputText"></textarea>
+  <div class="icons">
+   <button id="micBtn">🎤</button>
+   <label>📷
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+   </label>
+  </div>
+ </div>
+
+ <div class="counter"><span id="charCount">0</span> characters</div>
+
+ <div class="controls">
+  <select id="length">
+   <option value="short">Short</option>
+   <option value="medium" selected>Medium</option>
+   <option value="long">Long</option>
+  </select>
+  <button id="summarizeBtn" disabled>Summarize Now</button>
+ </div>
+
+ <div class="loader" id="loader">🧠 Processing...</div>
+
+ <div class="output" id="outputBox">
+  <h3>Summary</h3>
+  <div class="summary-box" id="summary"></div>
+  <div class="actions">
+   <button onclick="copyText()">📋 Copy</button>
+   <button class="clear" onclick="clearAll()">🗑️ Clear</button>
+  </div>
+ </div>
+</div>
+
+<!-- OCR LIBRARY -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<script>
+const input=inputText,btn=summarizeBtn,counter=charCount;
+input.oninput=()=>{counter.textContent=input.value.length;btn.disabled=!input.value.trim()}
+
+btn.onclick=()=>{
+ loader.style.display="block";
+ setTimeout(()=>{
+  let s=input.value.match(/[^.!?]+[.!?]+/g)||[input.value];
+  let r=length.value=="short"?0.3:length.value=="long"?0.8:0.5;
+  summary.innerText=s.slice(0,Math.ceil(s.length*r)).join(" ");
+  outputBox.classList.add("show");
+  loader.style.display="none";
+ },1200)
+}
+
+// CAMERA OCR
+cameraInput.onchange=async()=>{
+ const file=cameraInput.files[0];
+ if(!file)return;
+ loader.style.display="block";
+ const res=await Tesseract.recognize(file,"eng");
+ input.value+=" "+res.data.text;
+ counter.textContent=input.value.length;
+ btn.disabled=false;
+ loader.style.display="none";
+}
+
+// MIC
+if('webkitSpeechRecognition'in window){
+ let r=new webkitSpeechRecognition();
+ r.continuous=true;
+ micBtn.onmousedown=()=>r.start();
+ micBtn.onmouseup=()=>r.stop();
+ r.onresult=e=>{
+  input.value+=" "+e.results[e.results.length-1][0].transcript;
+  counter.textContent=input.value.length;
+  btn.disabled=false;
+ }
+}
+
+function copyText(){navigator.clipboard.writeText(summary.innerText)}
+function clearAll(){input.value="";counter.textContent=0;summary.innerText="";btn.disabled=true}
+
+setTimeout(()=>{
+ intro.style.display="none";
+ app.classList.add("show");
+},4800)
+
+function showHello(){
+ let n=userName.value.trim();
+ if(!n)return;
+ nameScreen.style.display="none";
+ helloText.innerText="Hello 👋 "+n;
+ helloScreen.style.display="flex";
+ setTimeout(()=>helloScreen.style.display="none",3000)
+}
+</script>
+</body>
+</html>
