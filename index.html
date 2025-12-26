@@ -126,9 +126,12 @@ button:disabled{background:#cbd5e1}
   <textarea id="inputText"></textarea>
   <div class="icons">
    <button id="micBtn">🎤</button>
-   <label>📷
-    <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+
+   <!-- UPDATED CAMERA / GALLERY INPUT -->
+   <label title="Camera / Gallery">📷
+    <input type="file" id="cameraInput" accept="image/*" hidden>
    </label>
+
   </div>
  </div>
 
@@ -160,8 +163,13 @@ button:disabled{background:#cbd5e1}
 
 <script>
 const input=inputText,btn=summarizeBtn,counter=charCount;
-input.oninput=()=>{counter.textContent=input.value.length;btn.disabled=!input.value.trim()}
 
+input.oninput=()=>{
+ counter.textContent=input.value.length;
+ btn.disabled=!input.value.trim();
+}
+
+// SUMMARIZE
 btn.onclick=()=>{
  loader.style.display="block";
  setTimeout(()=>{
@@ -173,15 +181,19 @@ btn.onclick=()=>{
  },1200)
 }
 
-// CAMERA OCR
+// CAMERA / GALLERY OCR
 cameraInput.onchange=async()=>{
  const file=cameraInput.files[0];
  if(!file)return;
+
  loader.style.display="block";
- const res=await Tesseract.recognize(file,"eng");
+
+ const res=await Tesseract.recognize(file,"eng+hin");
+
  input.value+=" "+res.data.text;
  counter.textContent=input.value.length;
  btn.disabled=false;
+
  loader.style.display="none";
 }
 
@@ -198,8 +210,17 @@ if('webkitSpeechRecognition'in window){
  }
 }
 
-function copyText(){navigator.clipboard.writeText(summary.innerText)}
-function clearAll(){input.value="";counter.textContent=0;summary.innerText="";btn.disabled=true}
+function copyText(){
+ navigator.clipboard.writeText(summary.innerText);
+}
+
+function clearAll(){
+ input.value="";
+ counter.textContent=0;
+ summary.innerText="";
+ btn.disabled=true;
+ outputBox.classList.remove("show");
+}
 
 setTimeout(()=>{
  intro.style.display="none";
@@ -215,5 +236,6 @@ function showHello(){
  setTimeout(()=>helloScreen.style.display="none",3000)
 }
 </script>
+
 </body>
 </html>
